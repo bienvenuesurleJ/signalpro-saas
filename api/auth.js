@@ -6,7 +6,7 @@ module.exports = async (req, res) => {
       const s = await L.session(req);
       if (!s) return L.json(res, 401, { error: 'non connecté' });
       const p = await L.plan(s.plan_code);
-      return L.json(res, 200, { email: s.email, plan: s.plan_code, limits: p ? p.limits : {}, billing: !!s.stripe_customer_id });
+      return L.json(res, 200, { email: s.email, plan: s.plan_code, limits: p ? p.limits : {}, billing: !!s.stripe_customer_id, is_admin: !!s.is_admin || s.role === 'admin', role: s.role || null });
     }
     if (!L.isJsonPost(req)) return L.json(res, 405, { error: 'Requête refusée.' });
     if (a === 'logout') {
