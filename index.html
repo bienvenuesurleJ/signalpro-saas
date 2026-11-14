@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bot Trading Signaux – signaux d’achat et de vente en direct</title>
+<meta name="description" content="Signaux d’achat et de vente (RSI, MACD, SMA) sur crypto et forex, prix en direct et portefeuille virtuel.">
+<meta name="theme-color" content="#0b0f17">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<style>
+:root{--bg:#0b0f17;--panel:#121826;--panel2:#182033;--line:#243049;--text:#e6ebf5;--muted:#8a96ad;--accent:#4f8cff;--buy:#19c37d;--sell:#ff5c6c;color-scheme:dark}
+@media(prefers-color-scheme:light){:root{--bg:#f3f5fa;--panel:#fff;--panel2:#eef1f8;--line:#d8dfed;--text:#16203a;--muted:#5b6985;--accent:#2f6fed;--buy:#0d9a62;--sell:#dc3249;color-scheme:light}}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+a{color:var(--accent)}.wrap{max-width:1040px;margin:0 auto;padding:0 1.1rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.9rem 0}
+.brand{font-weight:700;font-size:1.05rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.5rem 1.1rem;border:0;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}.btn[disabled]{opacity:.55;cursor:default}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;align-items:center;padding:2.2rem 0 3rem}
+h1{font-size:clamp(1.9rem,5vw,3rem);line-height:1.1;margin:0 0 1rem;letter-spacing:-.02em}
+.lead{color:var(--muted);max-width:34em;margin:0 0 1.4rem}
+.sample{background:var(--panel);border:1px solid rgba(25,195,125,.6);box-shadow:0 0 0 1px rgba(25,195,125,.25) inset;border-radius:14px;padding:1rem}
+.sample .top{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
+.badge{font-weight:800;font-size:.85rem;padding:.3rem .65rem;border-radius:8px;background:rgba(25,195,125,.15);color:var(--buy)}
+.price{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums}
+.m{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin:.8rem 0}.m div{background:var(--panel2);border-radius:8px;padding:.4rem .5rem}.m b{display:block;font-variant-numeric:tabular-nums}.m span,.muted{color:var(--muted);font-size:.82rem}
+h2{font-size:1.5rem;margin:0 0 .3rem}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:.6rem 0 1.2rem}
+.seg button{background:var(--panel);color:var(--muted);border:0;padding:.55rem 1rem;font:inherit;cursor:pointer;min-height:44px}.seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.plan{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.1rem;display:flex;flex-direction:column;gap:.7rem}
+.plan.pro{border-color:var(--accent)}.plan h3{margin:0}.plan .p{font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums}
+.plan ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.35rem;font-size:.92rem;flex:1}.plan li::before{content:"✓ ";color:var(--buy)}.plan li.no{color:var(--muted)}.plan li.no::before{content:"– ";color:var(--muted)}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:1.2rem;width:min(400px,calc(100vw - 1.5rem))}dialog::backdrop{background:rgba(5,8,14,.65)}
+label{display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;color:var(--muted);margin:.7rem 0}
+input{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:.6rem;font:inherit;font-size:16px;min-height:46px;width:100%}
+.err{color:var(--sell);min-height:1.3em;font-size:.9rem;margin:.3rem 0}
+footer{border-top:1px solid var(--line);margin-top:3rem;padding:1.4rem 0 2rem;color:var(--muted);font-size:.85rem}
+@media(max-width:760px){.hero{grid-template-columns:1fr;padding-top:1rem}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><span class="brand">📈 Bot Trading Signaux</span><span><button id="b-account" class="btn ghost" hidden>Mon abonnement</button> <a id="b-login" class="btn ghost" href="#" role="button">Se connecter</a></span></header>
+
+<section class="hero">
+  <div>
+    <h1>Sache quand acheter et quand vendre, sans fixer les graphiques toute la journée.</h1>
+    <p class="lead">Chaque actif que tu suis affiche un signal calculé sur RSI, MACD et moyennes mobiles, avec le prix en direct et le suivi de ton portefeuille. Crypto et forex.</p>
+    <button id="b-start" class="btn">Créer un compte gratuit</button>
+  </div>
+  <div class="sample" aria-label="Exemple de carte de signal">
+    <div class="top"><div><strong>Bitcoin</strong><div class="muted">BTC/USDT · exemple</div></div><span class="badge">ACHAT</span></div>
+    <div class="price">64 210,00 $</div>
+    <div class="m"><div><span>RSI 14</span><b>31,4</b></div><div><span>MACD</span><b>+112</b></div><div><span>SMA 50</span><b>62 980</b></div></div>
+    <div class="muted">RSI sous 35 et MACD qui se retourne à la hausse. Valeurs d’illustration.</div>
+  </div>
+</section>
+
+<section id="offres">
+  <h2>Choisis ton offre</h2>
+  <p class="muted" style="margin:0">Commence gratuitement, passe à une offre supérieure quand tu en as besoin.</p>
+  <div class="seg" role="group" aria-label="Fréquence de paiement"><button id="i-month" aria-pressed="true">Mensuel</button><button id="i-year" aria-pressed="false">Annuel</button></div>
+  <div id="plans" class="plans" aria-live="polite"></div>
+</section>
+
+<footer><strong>Analyse technique, pas un conseil en investissement.</strong> Les signaux sont calculés automatiquement à partir de données de marché et ne tiennent pas compte de ta situation. Tu peux perdre tout ou partie de ton capital.</footer>
+</div>
+
+<dialog id="dlg">
+  <div class="seg" role="group"><button id="t-login" aria-pressed="true">Connexion</button><button id="t-signup" aria-pressed="false">Inscription</button></div>
+  <form id="f" autocomplete="on">
+    <label>Email<input id="e" type="email" autocomplete="email" required maxlength="200"></label>
+    <label>Mot de passe<input id="p" type="password" autocomplete="current-password" required minlength="10" maxlength="200"></label>
+    <div id="msg" class="err" role="alert"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end"><button type="button" id="x" class="btn ghost">Annuler</button><button id="go" class="btn">Se connecter</button></div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)},st={me:null,interval:'month',mode:'login',pending:null,plans:[]};
+var NAMES={free:'Gratuit'};
+function api(path,body){return fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){if(!r.ok)throw new Error(j.error||'Erreur');return j})})}
+function eur(c){return (c/100).toLocaleString('fr-FR',{minimumFractionDigits:c%100?2:0,maximumFractionDigits:2})+' €'}
+function lim(v,u){return v==null?'Illimité':v+' '+u}
+function feats(l){var r=[[1,lim(l.max_assets,'actifs suivis')],[1,lim(l.max_positions,'positions au portefeuille')],[1,'Historique : '+(l.history_days==null?'illimité':l.history_days+' jours')],[1,(l.risk_profiles||[]).length+' profil'+((l.risk_profiles||[]).length>1?'s':'')+' de risque'],[l.forex,'Paires forex'],[l.forex_live,'Forex en temps réel'],[l.cloud_sync,'Synchro entre appareils'],[l.export,'Export et import de sauvegarde'],[l.notifications,'Notifications']];return r}
+function render(){var box=$('plans');box.textContent='';st.plans.forEach(function(p){
+  var c=document.createElement('div');c.className='plan'+(p.code==='pro'?' pro':'');
+  var h=document.createElement('h3');h.textContent=p.name;c.appendChild(h);
+  var cents=st.interval==='year'?p.price_yearly_cents:p.price_monthly_cents,pr=document.createElement('div');pr.className='p';
+  pr.textContent=p.code==='free'?'0 €':(cents?eur(cents):'Bientôt');
+  var s=document.createElement('span');s.className='muted';s.textContent=p.code==='free'||!cents?'':(st.interval==='year'?' / an':' / mois');pr.appendChild(s);c.appendChild(pr);
+  var ul=document.createElement('ul');feats(p.limits||{}).forEach(function(f){var li=document.createElement('li');if(!f[0])li.className='no';li.textContent=f[1];ul.appendChild(li)});c.appendChild(ul);
+  var b=document.createElement('button');b.className='btn'+(p.code==='free'?' ghost':'');
+  var cur=st.me&&st.me.plan===p.code;b.textContent=cur?'Ton offre actuelle':(p.code==='free'?'Commencer':'Choisir '+p.name);
+  b.disabled=cur||(p.code!=='free'&&!cents);b.onclick=function(){choose(p.code)};c.appendChild(b);box.appendChild(c)})}
+function choose(code){
+  if(!st.me){st.pending=code;return openDlg('signup')}
+  if(code==='free')return location.href='/app';
+  api('/api/checkout',{plan:code,interval:st.interval}).then(function(r){location.href=r.url}).catch(function(e){alert(e.message)})}
+function openDlg(m){setMode(m);$('msg').textContent='';$('dlg').showModal();$('e').focus()}
+function setMode(m){st.mode=m;$('t-login').setAttribute('aria-pressed',m==='login');$('t-signup').setAttribute('aria-pressed',m==='signup');$('go').textContent=m==='login'?'Se connecter':'Créer mon compte';$('p').autocomplete=m==='login'?'current-password':'new-password'}
+$('t-login').onclick=function(){setMode('login')};$('t-signup').onclick=function(){setMode('signup')};$('x').onclick=function(){$('dlg').close()};
+$('b-login').onclick=function(e){e.preventDefault();st.me?location.href='/app':openDlg('login')};
+$('b-start').onclick=function(){st.me?location.href='/app':openDlg('signup')};
+$('i-month').onclick=$('i-year').onclick=function(){st.interval=this.id==='i-year'?'year':'month';$('i-month').setAttribute('aria-pressed',st.interval==='month');$('i-year').setAttribute('aria-pressed',st.interval==='year');render()};
+$('b-account').onclick=function(){api('/api/portal',{}).then(function(r){location.href=r.url}).catch(function(e){alert(e.message)})};
+$('f').onsubmit=function(ev){ev.preventDefault();$('go').disabled=true;$('msg').textContent='';
+  api('/api/auth?a='+st.mode,{email:$('e').value,password:$('p').value}).then(function(){
+    if(st.pending&&st.pending!=='free'){var c=st.pending;st.pending=null;return api('/api/auth?a=me').then(function(m){st.me=m;choose(c)})}
+    location.href='/app'}).catch(function(e){$('msg').textContent=e.message}).then(function(){$('go').disabled=false})};
+Promise.all([api('/api/plans').catch(function(){return[]}),api('/api/auth?a=me').catch(function(){return null})]).then(function(r){
+  st.plans=r[0];st.me=r[1];
+  if(st.me){$('b-login').textContent='Ouvrir l’app';$('b-start').textContent='Ouvrir l’app';$('b-account').hidden=!st.me.billing}
+  render();if(/login=1/.test(location.search)&&!st.me)openDlg('login')});
+})();
+</script>
+</body>
+</html>
