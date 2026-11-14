@@ -51,7 +51,7 @@ async function startSession(res, userId) {
 async function session(req) {
   const t = cookies(req).sp_session;
   if (!t || !/^[0-9a-f]{64}$/.test(t)) return null;
-  const rows = await sb(`sp_sessions?token_hash=eq.${sha(t)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id,sp_users(email,plan_code,stripe_customer_id)`);
+  const rows = await sb(`sp_sessions?token_hash=eq.${sha(t)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id,sp_users(email,plan_code,stripe_customer_id,is_admin,role)`);
   if (!rows || !rows[0] || !rows[0].sp_users) return null;
   return { user_id: rows[0].user_id, token_hash: sha(t), ...rows[0].sp_users };
 }
