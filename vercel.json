@@ -1,6 +1,12 @@
 {
-  "rewrites": [{ "source": "/app", "destination": "/api/app" }],
-  "functions": { "api/app.js": { "includeFiles": "private/**" } },
+  "rewrites": [
+    { "source": "/app", "destination": "/api/app" },
+    { "source": "/admin", "destination": "/api/admin-page" }
+  ],
+  "functions": {
+    "api/app.js": { "includeFiles": "private/**" },
+    "api/admin-page.js": { "includeFiles": "private/**" }
+  },
   "headers": [{ "source": "/(.*)", "headers": [
     { "key": "X-Content-Type-Options", "value": "nosniff" },
     { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
