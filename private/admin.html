@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin — SignalPro SaaS</title>
+<meta name="theme-color" content="#0b0f17">
+<style>
+:root{--bg:#0b0f17;--panel:#121826;--panel2:#182033;--line:#243049;--text:#e6ebf5;--muted:#8a96ad;--accent:#4f8cff;--buy:#19c37d;--sell:#ff5c6c;--warn:#f5b84a;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.2rem;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0f1524,#0b0f17);position:sticky;top:0;z-index:10}
+.brand{font-weight:700}.btn{display:inline-flex;align-items:center;min-height:40px;padding:.45rem .9rem;border:0;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}.btn.danger{background:rgba(255,92,108,.15);color:var(--sell);border:1px solid rgba(255,92,108,.4)}
+.btn.small{min-height:32px;padding:.25rem .6rem;font-size:.85rem}
+main{max-width:1100px;margin:0 auto;padding:1.2rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.8rem;margin-bottom:1.4rem}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem}.stat b{display:block;font-size:1.6rem}.stat span{color:var(--muted);font-size:.85rem}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.1rem;margin-bottom:1.2rem}
+h2{margin:0 0 .8rem;font-size:1.15rem}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:.55rem .4rem;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:.82rem}
+input,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:.45rem .6rem;font:inherit;min-height:38px}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem}
+.badge{font-size:.75rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:rgba(79,140,255,.15);color:var(--accent)}
+.badge.free{background:rgba(163,172,192,.15);color:var(--muted)}
+.badge.pro,.badge.elite{background:rgba(25,195,125,.15);color:var(--buy)}
+.err{color:var(--sell)}.ok{color:var(--buy)}
+.muted{color:var(--muted)}.hidden{display:none!important}
+@media(max-width:700px){table{font-size:.82rem}th,td{padding:.4rem .25rem}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🔐 Admin SignalPro</div>
+  <div>
+    <a class="btn ghost small" href="/app">← Retour app</a>
+    <button id="btn-logout" class="btn ghost small">Déconnexion</button>
+  </div>
+</header>
+<main>
+  <div id="msg" class="err" style="min-height:1.4em;margin-bottom:.6rem"></div>
+  <div class="stats" id="stats">
+    <div class="stat"><span>Utilisateurs</span><b id="s-users">—</b></div>
+    <div class="stat"><span>Abonnements actifs</span><b id="s-subs">—</b></div>
+    <div class="stat"><span>Plans</span><b id="s-plans">—</b></div>
+  </div>
+  <div class="box">
+    <h2>Clients / Utilisateurs</h2>
+    <div class="row">
+      <input id="q" type="search" placeholder="Rechercher par email…" style="flex:1;min-width:180px">
+      <button id="btn-search" class="btn small">Rechercher</button>
+      <button id="btn-refresh" class="btn ghost small">Rafraîchir</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Email</th><th>Plan</th><th>Admin</th><th>Dernière connexion</th><th>Actions</th></tr></thead>
+        <tbody id="users-tb"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="box hidden" id="user-detail">
+    <h2>Détail client</h2>
+    <div id="ud-info" class="muted small" style="margin-bottom:.8rem"></div>
+    <div class="row">
+      <label>Nouveau plan
+        <select id="ud-plan"></select>
+      </label>
+      <label>Durée (jours, optionnel)
+        <input id="ud-days" type="number" min="1" placeholder="illimité">
+      </label>
+      <button id="ud-set" class="btn small">Assigner l'abonnement</button>
+      <button id="ud-close" class="btn ghost small">Fermer</button>
+    </div>
+    <div id="ud-subs" style="margin-top:1rem"></div>
+  </div>
+</main>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var plansCache = [];
+  function api(path, body){
+    var o = body === undefined ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) };
+    return fetch('/api/admin?a=' + path, o).then(function(r){
+      return r.json().then(function(j){ if(!r.ok) throw new Error(j.error || 'Erreur'); return j; });
+    });
+  }
+  function showErr(m){ $('msg').textContent = m || ''; $('msg').className = m ? 'err' : ''; }
+  function badge(plan){ return '<span class="badge ' + (plan||'free') + '">' + (plan||'free') + '</span>'; }
+  function loadStats(){
+    api('stats').then(function(d){
+      $('s-users').textContent = d.users_count;
+      $('s-subs').textContent = d.active_subs;
+      $('s-plans').textContent = (d.plans||[]).length;
+      plansCache = d.plans || [];
+      var sel = $('ud-plan'); sel.innerHTML = '';
+      (d.plans||[]).forEach(function(p){
+        var o = document.createElement('option'); o.value = p.code; o.textContent = p.name + ' (' + p.code + ')'; sel.appendChild(o);
+      });
+    }).catch(function(e){ showErr(e.message); });
+  }
+  function loadUsers(q){
+    var url = 'users' + (q ? '&q=' + encodeURIComponent(q) : '');
+    api(url).then(function(d){
+      var tb = $('users-tb'); tb.innerHTML = '';
+      (d.users||[]).forEach(function(u){
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + esc(u.email) + '</td><td>' + badge(u.plan_code) + '</td><td>' + (u.is_admin ? '✓' : '—') + '</td><td class="muted small">' + (u.last_login_at ? new Date(u.last_login_at).toLocaleString('fr-FR') : '—') + '</td><td><button class="btn small ghost" data-id="' + u.id + '">Gérer</button></td>';
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('button[data-id]').forEach(function(b){
+        b.onclick = function(){ openUser(b.getAttribute('data-id')); };
+      });
+    }).catch(function(e){ showErr(e.message); });
+  }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]; }); }
+  function openUser(id){
+    api('user&id=' + encodeURIComponent(id)).then(function(d){
+      var u = d.user;
+      $('user-detail').classList.remove('hidden');
+      $('ud-info').innerHTML = '<strong>' + esc(u.email) + '</strong> · plan actuel ' + badge(u.plan_code) + ' · id ' + u.id;
+      $('ud-plan').value = u.plan_code || 'free';
+      $('ud-days').value = '';
+      $('ud-set').onclick = function(){
+        showErr('');
+        api('set-plan', { user_id: u.id, plan_code: $('ud-plan').value, days: $('ud-days').value ? Number($('ud-days').value) : null }).then(function(){
+          showErr(''); $('msg').textContent = 'Abonnement mis à jour.'; $('msg').className = 'ok';
+          loadUsers($('q').value); loadStats(); openUser(id);
+        }).catch(function(e){ showErr(e.message); });
+      };
+      var html = '<h3 style="margin:.6rem 0 .4rem;font-size:1rem">Historique abonnements</h3>';
+      if (!(d.subscriptions||[]).length) html += '<p class="muted">Aucun abonnement enregistré.</p>';
+      else {
+        html += '<table><thead><tr><th>Plan</th><th>Statut</th><th>Fin</th><th>Notes</th></tr></thead><tbody>';
+        d.subscriptions.forEach(function(s){
+          html += '<tr><td>' + badge(s.plan_code) + '</td><td>' + esc(s.status) + '</td><td class="small">' + (s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('fr-FR') : '—') + '</td><td class="muted small">' + esc(s.notes||'') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      }
+      $('ud-subs').innerHTML = html;
+    }).catch(function(e){ showErr(e.message); });
+  }
+  $('ud-close').onclick = function(){ $('user-detail').classList.add('hidden'); };
+  $('btn-search').onclick = function(){ loadUsers($('q').value); };
+  $('btn-refresh').onclick = function(){ loadStats(); loadUsers($('q').value); };
+  $('q').onkeydown = function(e){ if(e.key==='Enter') loadUsers($('q').value); };
+  $('btn-logout').onclick = function(){
+    fetch('/api/auth?a=logout', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }).then(function(){ location.href='/'; });
+  };
+  fetch('/api/auth?a=me').then(function(r){ return r.json(); }).then(function(me){
+    if (!me || (!me.is_admin && me.role !== 'admin')) {
+      showErr('Accès réservé aux administrateurs.');
+      setTimeout(function(){ location.href='/app'; }, 1500);
+      return;
+    }
+    loadStats(); loadUsers();
+  }).catch(function(){ location.href='/?login=1'; });
+})();
+</script>
+</body>
+</html>
