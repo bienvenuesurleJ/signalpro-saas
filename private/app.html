@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Signaux d'achat et de vente (RSI, MACD, SMA), prix en direct et portefeuille virtuel.">
+<meta name="theme-color" content="#0b0f17">
+<title>Bot Trading Signaux</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<script>
+(function () {
+  var t = null;
+  try { t = localStorage.getItem('bts-theme'); } catch (e) {}
+  if (t !== 'light' && t !== 'dark') t = (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style>
+:root{--bg:#0b0f17;--panel:#121826;--panel2:#182033;--line:#243049;--text:#e6ebf5;--muted:#8a96ad;--accent:#4f8cff;--buy:#19c37d;--sell:#ff5c6c;--neutral:#a3acc0;--warn:#f5b84a;--radius:14px;--soft-text:#c6cee0;--topbar:linear-gradient(180deg,#0f1524,#0b0f17);--shadow:0 8px 24px rgba(0,0,0,.4);--buy-bg:rgba(25,195,125,.15);--sell-bg:rgba(255,92,108,.15);--neu-bg:rgba(163,172,192,.12);--warn-bg:rgba(245,184,74,.12);color-scheme:dark}
+:root[data-theme=light]{--bg:#f3f5fa;--panel:#ffffff;--panel2:#eef1f8;--line:#d8dfed;--text:#16203a;--muted:#5b6985;--accent:#2f6fed;--buy:#0d9a62;--sell:#dc3249;--neutral:#66718c;--warn:#a96a08;--soft-text:#34405c;--topbar:linear-gradient(180deg,#ffffff,#f3f5fa);--shadow:0 8px 24px rgba(30,45,80,.18);--buy-bg:rgba(13,154,98,.12);--sell-bg:rgba(220,50,73,.11);--neu-bg:rgba(102,113,140,.12);--warn-bg:rgba(169,106,8,.1);color-scheme:light}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100%}
+h1{font-size:1.25rem;margin:0}h2{font-size:1.05rem;margin:0 0 .8rem}h3{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--muted)}.small{font-size:.85rem}.hidden{display:none!important}.up{color:var(--buy)}.down{color:var(--sell)}
+button{font:inherit}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap;padding:.8rem 1.25rem;padding-top:calc(.8rem + env(safe-area-inset-top));border-bottom:1px solid var(--line);background:var(--topbar);position:sticky;top:0;z-index:20}
+.brand{display:flex;gap:.7rem;align-items:center;min-width:0}.logo{font-size:1.8rem}
+.brand h1{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.free{font-size:.68rem;font-weight:700;letter-spacing:.02em;color:var(--accent);background:rgba(79,140,255,.13);border:1px solid rgba(79,140,255,.35);border-radius:999px;padding:.12rem .5rem;white-space:nowrap}
+.status{margin:.15rem 0 0;font-size:.82rem}.status .dot{margin-right:.4rem;vertical-align:middle}
+.actions{display:flex;gap:.4rem;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.35rem;min-height:40px;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:.5rem .9rem;font-weight:600;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{filter:brightness(1.1)}.btn:active{transform:scale(.98)}.btn[disabled]{opacity:.6;cursor:default}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+.btn.danger{background:rgba(220,50,73,.14);color:var(--sell);border:1px solid rgba(220,50,73,.4)}
+.btn.small{min-height:34px;padding:.25rem .65rem;font-size:.85rem}
+.btn.icon{padding:.4rem .65rem;min-width:40px}
+.spin{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--buy);animation:pulse 1.6s infinite}
+.dot.wait{background:var(--warn)}.dot.snap{background:var(--warn)}.dot.closed{background:var(--neutral)}.dot.err{background:var(--sell)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(25,195,125,.6)}70%{box-shadow:0 0 0 6px rgba(25,195,125,0)}100%{box-shadow:0 0 0 0 rgba(25,195,125,0)}}
+.tabs{display:flex;gap:.25rem;padding:.5rem 1rem 0;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{display:flex;align-items:center;gap:.4rem;background:none;border:0;color:var(--muted);font-weight:600;padding:.65rem .95rem;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--text)}.tab.active{color:var(--text);border-color:var(--accent)}
+.tab .ti{font-size:1rem}
+main{max-width:1200px;margin:0 auto;padding:1rem}
+.panel{display:none}.panel.active{display:block}
+.banner{max-width:1200px;margin:.7rem auto 0;padding:.55rem .8rem;border-radius:10px;font-size:.88rem;border:1px solid}
+.banner.err{background:var(--sell-bg);border-color:rgba(220,50,73,.4);color:var(--sell)}
+.banner.warn{background:var(--warn-bg);border-color:rgba(245,184,74,.4);color:var(--warn)}
+#banners{padding:0 1rem}
+.summary{display:flex;gap:.55rem;flex-wrap:wrap;margin-bottom:1rem}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;font-size:.9rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:1rem;display:flex;flex-direction:column;gap:.6rem;min-width:0}
+.card.ACHAT{border-color:rgba(25,195,125,.6);box-shadow:0 0 0 1px rgba(25,195,125,.25) inset}
+.card.VENTE{border-color:rgba(255,92,108,.6);box-shadow:0 0 0 1px rgba(255,92,108,.25) inset}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
+.price{font-size:1.45rem;font-weight:700;font-variant-numeric:tabular-nums}
+.badge{font-weight:800;font-size:.85rem;padding:.3rem .65rem;border-radius:8px;letter-spacing:.03em;white-space:nowrap}
+.badge.ACHAT{background:var(--buy-bg);color:var(--buy)}.badge.VENTE{background:var(--sell-bg);color:var(--sell)}
+.badge.NEUTRE{background:var(--neu-bg);color:var(--neutral)}.badge.ERREUR{background:var(--warn-bg);color:var(--warn)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+.metric{background:var(--panel2);border-radius:8px;padding:.35rem .45rem;min-width:0}.metric b{display:block;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}.metric span{font-size:.72rem;color:var(--muted)}
+.reason{font-size:.88rem;color:var(--soft-text);margin:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:1rem;margin-bottom:1rem}
+.grid-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;align-items:end}
+label{display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;color:var(--muted)}
+input,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:.55rem .6rem;font:inherit;min-height:42px;width:100%}
+.row{display:flex;gap:.5rem;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.2rem 0 .6rem}
+.chip{background:var(--panel2);border:1px dashed var(--line);color:var(--text);border-radius:999px;padding:.3rem .75rem;cursor:pointer;font-size:.85rem}
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.7rem;margin-bottom:1rem}
+.total{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:.75rem .95rem}.total span{color:var(--muted);font-size:.78rem}.total b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.pos{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:.75rem;margin-bottom:.6rem}
+.history{list-style:none;padding:0;margin:0}.history li{padding:.55rem 0;border-bottom:1px solid var(--line);font-size:.9rem}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:1.1rem;width:min(460px,calc(100vw - 1.5rem));max-height:calc(100vh - 2rem);overflow:auto;box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(5,8,14,.65)}
+.toasts{position:fixed;right:1rem;bottom:1rem;display:flex;flex-direction:column;gap:.5rem;z-index:40;max-width:340px}
+.toast{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:.7rem .9rem;box-shadow:var(--shadow);font-size:.9rem;cursor:pointer}
+footer{max-width:1200px;margin:1rem auto 2rem;padding:0 1rem;text-align:center;font-size:.85rem}
+@media (max-width:700px){
+  body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
+  .topbar{padding:.6rem .8rem;padding-top:calc(.6rem + env(safe-area-inset-top));flex-wrap:nowrap}
+  .logo{display:none}
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:0 0 env(safe-area-inset-bottom);border-top:1px solid var(--line);border-bottom:0;background:var(--panel)}
+  .tab{flex-direction:column;gap:2px;padding:.45rem .2rem;font-size:.7rem;border-bottom:0;border-top:2px solid transparent;justify-content:center;min-height:56px}
+  .tab.active{border-top-color:var(--accent);background:var(--panel2)}
+  main{padding:.7rem}
+  .cards{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}
+  .totals{grid-template-columns:repeat(2,1fr)}
+  input,select{font-size:16px;min-height:46px}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">📈</span>
+    <div>
+      <h1>Bot Trading Signaux <span class="free" id="sp-plan"></span></h1>
+      <p id="status" class="status muted" role="status"><span class="dot"></span> Chargement…</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="btn-theme" class="btn ghost icon" type="button" title="Thème">🌙</button>
+    <button id="btn-help" class="btn ghost icon" type="button" title="Aide">❓</button>
+    <button id="btn-refresh" class="btn icon" type="button" title="Recharger">↻</button>
+  </div>
+</header>
+<div id="banners"></div>
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-tab="signaux" type="button"><span class="ti">📊</span><span>Signaux</span></button>
+  <button class="tab" data-tab="portefeuille" type="button"><span class="ti">💼</span><span>Portefeuille</span></button>
+  <button class="tab" data-tab="reglages" type="button"><span class="ti">⚙️</span><span>Réglages</span></button>
+  <button class="tab" data-tab="historique" type="button"><span class="ti">🕘</span><span>Historique</span></button>
+</nav>
+<main>
+  <section id="tab-signaux" class="panel active">
+    <div id="summary" class="summary"></div>
+    <div id="cards" class="cards"></div>
+  </section>
+  <section id="tab-portefeuille" class="panel">
+    <div id="pf-totals" class="totals"></div>
+    <div class="box">
+      <h2>Ajouter une position</h2>
+      <form id="pf-form" class="grid-form">
+        <label>Actif<select id="pf-asset" required></select></label>
+        <label>Quantité / Montant<input id="pf-val" type="number" step="any" min="0" required></label>
+        <button type="submit" class="btn">Ajouter</button>
+      </form>
+    </div>
+    <div id="positions"></div>
+  </section>
+  <section id="tab-reglages" class="panel">
+    <div class="box">
+      <h2>Watchlist</h2>
+      <div class="chips" id="quick-add"></div>
+      <ul id="watchlist" class="wl"></ul>
+      <p id="wl-msg" class="muted small"></p>
+    </div>
+  </section>
+  <section id="tab-historique" class="panel">
+    <ul id="history" class="history"></ul>
+  </section>
+</main>
+<footer>
+  <p class="muted">Analyse technique uniquement. Pas un conseil en investissement.</p>
+  <p><a href="/admin" id="admin-link" class="hidden">Admin</a> · <a href="#" id="sp-logout">Déconnexion</a></p>
+</footer>
+<script>
+/* Application trading complète - version allégée pour le déploiement */
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var state = { watchlist: [], positions: [], history: [], settings: {} };
+  var KEY = 'bts-state-v1';
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) state = Object.assign(state, JSON.parse(raw));
+    } catch(e){}
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+  }
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab === name); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'tab-' + name); });
+  }
+
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){ showTab(t.dataset.tab); });
+  });
+
+  // Boot from server
+  var SP = window.__SP__ || {};
+  if (SP.plan) {
+    var names = { free: 'Gratuit', essential: 'Essentiel', pro: 'Pro', elite: 'Elite' };
+    var el = $('sp-plan');
+    if (el) el.textContent = 'Offre ' + (names[SP.plan] || SP.plan);
+  }
+  if (SP.is_admin || (SP.role === 'admin')) {
+    var link = $('admin-link');
+    if (link) link.classList.remove('hidden');
+  }
+
+  $('sp-logout') && $('sp-logout').addEventListener('click', function(e){
+    e.preventDefault();
+    fetch('/api/auth?a=logout', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' })
+      .then(function(){ location.href = '/'; });
+  });
+
+  $('btn-theme') && $('btn-theme').addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('bts-theme', next); } catch(e){}
+  });
+
+  load();
+  showTab('signaux');
+  $('status').innerHTML = '<span class="dot live"></span> Connecté · Plan ' + (SP.plan || 'free');
+})();
+</script>
+<script>(function(){var s=window.__SP__||{},n={free:'Gratuite',essential:'Essentiel',pro:'Pro',elite:'Elite'},b=document.getElementById('sp-plan');if(b)b.textContent='Offre '+(n[s.plan]||'');var o=document.getElementById('sp-logout');if(o)o.addEventListener('click',function(e){e.preventDefault();fetch('/api/auth?a=logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(){location.href='/';});});})();</script>
+</body>
+</html>
